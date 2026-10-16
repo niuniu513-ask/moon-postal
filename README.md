@@ -17,10 +17,10 @@ let address = @moon-postal.Address::new(
   country_code="US",
 )
 let issues = @moon-postal.validate(rule, address)
-let label = @moon-postal.format_address(rule, address)
+let label = @moon-postal.format_if_valid(rule, address)
 ```
 
-`AddressRule::new` lets callers supply required fields, a postal-code pattern, and field order. `PostalPattern` supports exact or ranged digit counts, ranged ASCII alphanumeric codes, and a no-check option. Generic patterns reject internal separators; built-ins provide country-specific checks. `validate` reports missing configured fields, a country mismatch, and a postal-code syntax mismatch. Each issue has a `message()` for display. `format_address_lines` returns non-empty lines; `format_address` joins them with newlines. Built-in US, CA, and AU rules combine locality, region, and postal code on one line. Custom rules preserve their specified field order and separate lines. It does not geocode addresses, verify deliverability, infer a user's location, or guarantee that a postal code exists.
+`AddressRule::new` lets callers supply required fields, a postal-code pattern, and field order. `PostalPattern` supports exact or ranged digit counts, ranged ASCII alphanumeric codes, and a no-check option. Generic patterns reject internal separators; built-ins provide country-specific checks. `validate` reports missing configured fields, a country mismatch, and a postal-code syntax mismatch. Each issue has a `message()` for display. `format_address_lines` returns non-empty lines; `format_address` joins them with newlines. `format_if_valid` returns `None` when validation finds an issue. Built-in US, CA, and AU rules combine locality, region, and postal code on one line. Custom rules preserve their specified field order and separate lines. It does not geocode addresses, verify deliverability, infer a user's location, or guarantee that a postal code exists.
 
 ## Scope
 

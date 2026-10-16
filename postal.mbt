@@ -323,6 +323,15 @@ pub fn format_address(rule : AddressRule, address : Address) -> String {
 }
 
 ///|
+pub fn format_if_valid(rule : AddressRule, address : Address) -> String? {
+  if validate(rule, address).is_empty() {
+    Some(format_address(rule, address))
+  } else {
+    None
+  }
+}
+
+///|
 pub fn format_address_lines(
   rule : AddressRule,
   address : Address,

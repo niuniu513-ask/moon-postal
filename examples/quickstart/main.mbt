@@ -12,5 +12,8 @@ fn main {
   )
   let issues = @moon-postal.validate(rule, address)
   println("Issues: " + issues.length().to_string())
-  println(@moon-postal.format_address(rule, address))
+  match @moon-postal.format_if_valid(rule, address) {
+    Some(label) => println(label)
+    None => println("Address needs correction")
+  }
 }

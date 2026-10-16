@@ -51,6 +51,15 @@ test "custom rules preserve independent field lines" {
 }
 
 ///|
+test "safe formatting refuses invalid addresses" {
+  let rule = @moon-postal.builtin_rule("US").unwrap()
+  let valid = sample_address("US", "02108")
+  let invalid = sample_address("US", "not-a-zip")
+  assert_true(@moon-postal.format_if_valid(rule, valid) is Some(_))
+  assert_true(@moon-postal.format_if_valid(rule, invalid) is None)
+}
+
+///|
 test "required fields and invalid postal code are reported" {
   let rule = @moon-postal.builtin_rule("CA").unwrap()
   let address = @moon-postal.Address::new(
