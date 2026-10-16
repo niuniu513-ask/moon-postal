@@ -112,7 +112,7 @@ pub fn AddressRule::new(
   field_order : Array[AddressField],
 ) -> AddressRule {
   {
-    country_code: ascii_uppercase(country_code),
+    country_code: ascii_uppercase(country_code.trim().to_owned()),
     required_fields,
     postal_pattern,
     field_order,
@@ -138,7 +138,13 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
     "US" =>
       Some({
         country_code: "US",
-        required_fields: [AddressLine, Locality, AdministrativeArea, PostalCode],
+        required_fields: [
+          AddressLine,
+          Locality,
+          AdministrativeArea,
+          PostalCode,
+          Country,
+        ],
         postal_pattern: builtin_postal_pattern(UsZip),
         field_order: [
           Recipient,
@@ -153,7 +159,13 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
     "CA" =>
       Some({
         country_code: "CA",
-        required_fields: [AddressLine, Locality, AdministrativeArea, PostalCode],
+        required_fields: [
+          AddressLine,
+          Locality,
+          AdministrativeArea,
+          PostalCode,
+          Country,
+        ],
         postal_pattern: builtin_postal_pattern(CanadaPostal),
         field_order: [
           Recipient,
@@ -168,7 +180,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
     "GB" =>
       Some({
         country_code: "GB",
-        required_fields: [AddressLine, Locality, PostalCode],
+        required_fields: [AddressLine, Locality, PostalCode, Country],
         postal_pattern: builtin_postal_pattern(UkPostcode),
         field_order: [
           Recipient,
@@ -184,7 +196,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
     "JP" =>
       Some({
         country_code: "JP",
-        required_fields: [AddressLine, Locality, PostalCode],
+        required_fields: [AddressLine, Locality, PostalCode, Country],
         postal_pattern: builtin_postal_pattern(JapanPostal),
         field_order: [
           PostalCode,
@@ -200,7 +212,13 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
     "CN" =>
       Some({
         country_code: "CN",
-        required_fields: [AddressLine, Locality, AdministrativeArea, PostalCode],
+        required_fields: [
+          AddressLine,
+          Locality,
+          AdministrativeArea,
+          PostalCode,
+          Country,
+        ],
         postal_pattern: builtin_postal_pattern(ChinaPostal),
         field_order: [
           Country,
@@ -216,7 +234,13 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
     "AU" =>
       Some({
         country_code: "AU",
-        required_fields: [AddressLine, Locality, AdministrativeArea, PostalCode],
+        required_fields: [
+          AddressLine,
+          Locality,
+          AdministrativeArea,
+          PostalCode,
+          Country,
+        ],
         postal_pattern: PostalPattern::digits(4),
         field_order: [
           Recipient,
@@ -231,7 +255,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
     "AE" =>
       Some({
         country_code: "AE",
-        required_fields: [AddressLine, Locality, AdministrativeArea],
+        required_fields: [AddressLine, Locality, AdministrativeArea, Country],
         postal_pattern: PostalPattern::no_check(),
         field_order: [
           Recipient,
@@ -250,7 +274,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
 pub fn validate(rule : AddressRule, address : Address) -> Array[AddressIssue] {
   let issues : Array[AddressIssue] = []
   if !address.country_code.trim().is_empty() &&
-    ascii_uppercase(address.country_code) != rule.country_code {
+    ascii_uppercase(address.country_code.trim().to_owned()) != rule.country_code {
     issues.push({ code: CountryMismatch, field: Country, })
   }
   for field in rule.required_fields {

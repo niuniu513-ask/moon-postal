@@ -155,6 +155,28 @@ test "country code mismatch is diagnostic" {
 }
 
 ///|
+test "built-in rules require a country and accept surrounding whitespace" {
+  let rule = @moon-postal.builtin_rule("US").unwrap()
+  let missing = @moon-postal.Address::new(
+    address_lines=["1 Example Road"],
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="02108",
+  )
+  let issues = @moon-postal.validate(rule, missing)
+  assert_eq(issues.length(), 1)
+  assert_true(issues[0].field is @moon-postal.Country)
+  let padded = @moon-postal.Address::new(
+    address_lines=["1 Example Road"],
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="02108",
+    country_code=" us ",
+  )
+  assert_eq(@moon-postal.validate(rule, padded).length(), 0)
+}
+
+///|
 test "formatter skips empty fields and keeps every address line" {
   let rule = @moon-postal.builtin_rule("GB").unwrap()
   let address = @moon-postal.Address::new(
