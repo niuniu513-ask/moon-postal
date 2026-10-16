@@ -529,6 +529,9 @@ fn canada_postal_matches(input : String) -> Bool {
       if !is_ascii_letter(character) || "DFIOQU".contains(character.to_string()) {
         return false
       }
+      if index == 0 && "WZ".contains(character.to_string()) {
+        return false
+      }
     } else if character < '0' || character > '9' {
       return false
     }
