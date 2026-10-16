@@ -47,6 +47,7 @@ pub struct AddressRule {
   required_fields : Array[AddressField]
   postal_pattern : PostalPattern
   field_order : Array[AddressField]
+  combine_region_postal : Bool
 }
 pub fn AddressRule::new(String, Array[AddressField], PostalPattern, Array[AddressField]) -> Self
 

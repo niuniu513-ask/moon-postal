@@ -102,6 +102,7 @@ pub struct AddressRule {
   required_fields : Array[AddressField]
   postal_pattern : PostalPattern
   field_order : Array[AddressField]
+  combine_region_postal : Bool
 }
 
 ///|
@@ -116,6 +117,7 @@ pub fn AddressRule::new(
     required_fields,
     postal_pattern,
     field_order,
+    combine_region_postal: false,
   }
 }
 
@@ -165,6 +167,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
           Country,
         ],
         postal_pattern: builtin_postal_pattern(UsZip),
+        combine_region_postal: true,
         field_order: [
           Recipient,
           Organization,
@@ -186,6 +189,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
           Country,
         ],
         postal_pattern: builtin_postal_pattern(CanadaPostal),
+        combine_region_postal: true,
         field_order: [
           Recipient,
           Organization,
@@ -201,6 +205,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         country_code: "GB",
         required_fields: [AddressLine, Locality, PostalCode, Country],
         postal_pattern: builtin_postal_pattern(UkPostcode),
+        combine_region_postal: false,
         field_order: [
           Recipient,
           Organization,
@@ -217,6 +222,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         country_code: "JP",
         required_fields: [AddressLine, Locality, PostalCode, Country],
         postal_pattern: builtin_postal_pattern(JapanPostal),
+        combine_region_postal: false,
         field_order: [
           PostalCode,
           AdministrativeArea,
@@ -239,6 +245,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
           Country,
         ],
         postal_pattern: builtin_postal_pattern(ChinaPostal),
+        combine_region_postal: false,
         field_order: [
           Country,
           AdministrativeArea,
@@ -261,6 +268,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
           Country,
         ],
         postal_pattern: PostalPattern::digits(4),
+        combine_region_postal: true,
         field_order: [
           Recipient,
           Organization,
@@ -276,6 +284,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         country_code: "AE",
         required_fields: [AddressLine, Locality, AdministrativeArea, Country],
         postal_pattern: PostalPattern::no_check(),
+        combine_region_postal: false,
         field_order: [
           Recipient,
           Organization,
@@ -325,10 +334,29 @@ pub fn format_address_lines(
         for line in address.address_lines {
           push_nonempty(lines, line)
         }
+      Locality if rule.combine_region_postal =>
+        push_nonempty(lines, locality_region_postal_line(address))
+      AdministrativeArea | PostalCode if rule.combine_region_postal => ()
       _ => push_nonempty(lines, field_value(field, address))
     }
   }
   lines
+}
+
+///|
+fn locality_region_postal_line(address : Address) -> String {
+  let suffix : Array[String] = []
+  push_nonempty(suffix, address.administrative_area)
+  push_nonempty(suffix, address.postal_code)
+  let locality = address.locality.trim().to_owned()
+  let tail = suffix.join(" ")
+  if locality.is_empty() {
+    tail
+  } else if tail.is_empty() {
+    locality
+  } else {
+    locality + ", " + tail
+  }
 }
 
 ///|

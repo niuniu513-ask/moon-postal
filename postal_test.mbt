@@ -26,8 +26,28 @@ test "US address validation and formatting" {
   assert_eq(@moon-postal.validate(rule, address).length(), 0)
   assert_eq(
     @moon-postal.format_address(rule, address),
-    "Ada Lovelace\n12 Example Street\nBoston\nMA\n02108-1234\nUS",
+    "Ada Lovelace\n12 Example Street\nBoston, MA 02108-1234\nUS",
   )
+}
+
+///|
+test "custom rules preserve independent field lines" {
+  let rule = @moon-postal.AddressRule::new(
+    "US",
+    [],
+    @moon-postal.PostalPattern::no_check(),
+    [
+      @moon-postal.Locality,
+      @moon-postal.AdministrativeArea,
+      @moon-postal.PostalCode,
+    ],
+  )
+  let address = @moon-postal.Address::new(
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="02108",
+  )
+  assert_eq(@moon-postal.format_address(rule, address), "Boston\nMA\n02108")
 }
 
 ///|
