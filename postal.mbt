@@ -510,6 +510,11 @@ fn is_ascii_letter(character : Char) -> Bool {
 }
 
 ///|
+fn is_ascii_digit(character : Char) -> Bool {
+  character >= '0' && character <= '9'
+}
+
+///|
 fn canada_postal_matches(input : String) -> Bool {
   let trimmed = input.trim()
   let raw = trimmed.iter().to_array()
@@ -562,18 +567,24 @@ fn uk_postcode_matches(input : String) -> Bool {
   if chars.length() < 5 || chars.length() > 7 {
     return false
   }
-  let last_two = chars.length() - 2
-  if !is_ascii_letter(chars[last_two]) || !is_ascii_letter(chars[last_two + 1]) {
+  if compact == "GIR0AA" {
+    return true
+  }
+  let outward_length = chars.length() - 3
+  let area_length = if is_ascii_letter(chars[1]) { 2 } else { 1 }
+  let district_length = outward_length - area_length
+  if !is_ascii_letter(chars[0]) ||
+    district_length < 1 ||
+    district_length > 2 ||
+    !is_ascii_digit(chars[area_length]) {
     return false
   }
-  let mut has_digit = false
-  for index in 0..<chars.length() {
-    let character = chars[index]
-    if character >= '0' && character <= '9' {
-      has_digit = true
-    } else if !is_ascii_letter(character) {
-      return false
-    }
+  if district_length == 2 &&
+    !is_ascii_digit(chars[area_length + 1]) &&
+    !is_ascii_letter(chars[area_length + 1]) {
+    return false
   }
-  has_digit && chars[last_two - 1] >= '0' && chars[last_two - 1] <= '9'
+  is_ascii_digit(chars[outward_length]) &&
+  is_ascii_letter(chars[outward_length + 1]) &&
+  is_ascii_letter(chars[outward_length + 2])
 }

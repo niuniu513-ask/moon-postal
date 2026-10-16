@@ -90,6 +90,20 @@ test "country postal patterns accept and reject representative shapes" {
   )
   assert_eq(
     @moon-postal.validate(
+      @moon-postal.builtin_rule("GB").unwrap(),
+      sample_address("GB", "GIR 0AA"),
+    ).length(),
+    0,
+  )
+  assert_eq(
+    @moon-postal.validate(
+      @moon-postal.builtin_rule("GB").unwrap(),
+      sample_address("GB", "ABC 1AA"),
+    ).length(),
+    1,
+  )
+  assert_eq(
+    @moon-postal.validate(
       @moon-postal.builtin_rule("CA").unwrap(),
       sample_address("CA", "K1A 0B1"),
     ).length(),
