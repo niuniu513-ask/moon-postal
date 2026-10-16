@@ -38,6 +38,7 @@ pub struct AddressIssue {
   code : IssueCode
   field : AddressField
 }
+pub fn AddressIssue::message(Self) -> String
 
 pub struct AddressRule {
   country_code : String

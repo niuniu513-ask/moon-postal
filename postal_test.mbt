@@ -152,6 +152,10 @@ test "country code mismatch is diagnostic" {
   let address = @moon-postal.Address::new(country_code="CA")
   let issues = @moon-postal.validate(rule, address)
   assert_true(issues[0].code is @moon-postal.CountryMismatch)
+  assert_eq(
+    issues[0].message(),
+    "country code does not match the selected rule",
+  )
 }
 
 ///|
@@ -180,6 +184,7 @@ test "built-in rules require a country and accept surrounding whitespace" {
   let issues = @moon-postal.validate(rule, missing)
   assert_eq(issues.length(), 1)
   assert_true(issues[0].field is @moon-postal.Country)
+  assert_eq(issues[0].message(), "country code is required")
   let padded = @moon-postal.Address::new(
     address_lines=["1 Example Road"],
     locality="Boston",

@@ -133,6 +133,25 @@ pub struct AddressIssue {
 }
 
 ///|
+pub fn AddressIssue::message(self : AddressIssue) -> String {
+  let field = match self.field {
+    Recipient => "recipient"
+    Organization => "organization"
+    AddressLine => "address line"
+    DependentLocality => "dependent locality"
+    Locality => "locality"
+    AdministrativeArea => "administrative area"
+    PostalCode => "postal code"
+    Country => "country code"
+  }
+  match self.code {
+    MissingRequiredField => field + " is required"
+    InvalidPostalCode => "postal code has an invalid format"
+    CountryMismatch => "country code does not match the selected rule"
+  }
+}
+
+///|
 pub fn builtin_rule(country_code : String) -> AddressRule? {
   match ascii_uppercase(country_code) {
     "US" =>
