@@ -1,0 +1,80 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "niuniu513-ask/moon-postal"
+
+// Values
+pub fn builtin_rule(String) -> AddressRule?
+
+pub fn format_address(AddressRule, Address) -> String
+
+pub fn validate(AddressRule, Address) -> Array[AddressIssue]
+
+// Errors
+
+// Types and methods
+pub struct Address {
+  recipient : String
+  organization : String
+  address_lines : Array[String]
+  dependent_locality : String
+  locality : String
+  administrative_area : String
+  postal_code : String
+  country_code : String
+}
+pub fn Address::new(recipient? : String, organization? : String, address_lines? : Array[String], dependent_locality? : String, locality? : String, administrative_area? : String, postal_code? : String, country_code? : String) -> Self
+
+pub(all) enum AddressField {
+  Recipient
+  Organization
+  AddressLine
+  DependentLocality
+  Locality
+  AdministrativeArea
+  PostalCode
+  Country
+}
+
+pub struct AddressIssue {
+  code : IssueCode
+  field : AddressField
+}
+
+pub struct AddressRule {
+  country_code : String
+  required_fields : Array[AddressField]
+  postal_pattern : PostalPattern
+  field_order : Array[AddressField]
+}
+pub fn AddressRule::new(String, Array[AddressField], PostalPattern, Array[AddressField]) -> Self
+
+pub(all) enum IssueCode {
+  MissingRequiredField
+  InvalidPostalCode
+  CountryMismatch
+}
+
+pub struct PostalPattern {
+  kind : PostalPatternKind
+  minimum_length : Int
+  maximum_length : Int
+}
+pub fn PostalPattern::alphanumeric_in_range(Int, Int) -> Self
+pub fn PostalPattern::digits(Int) -> Self
+pub fn PostalPattern::digits_in_range(Int, Int) -> Self
+pub fn PostalPattern::no_check() -> Self
+
+pub(all) enum PostalPatternKind {
+  NoCheck
+  Digits
+  DigitsRange
+  AlphanumericRange
+  UsZip
+  CanadaPostal
+  UkPostcode
+  JapanPostal
+  ChinaPostal
+}
+
+// Type aliases
+
+// Traits
