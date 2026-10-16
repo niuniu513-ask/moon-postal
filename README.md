@@ -2,7 +2,7 @@
 
 MoonPostal is an offline MoonBit library for validating structured postal addresses against country rules and formatting their fields in a configured order.
 
-The first release provides built-in rules for the United States, Canada, the United Kingdom, Japan, China, Australia, and the United Arab Emirates. Other regions can be added as `AddressRule` values. The initial built-in set is not a global postal directory.
+The current release provides built-in rules for the United States, Canada, the United Kingdom, Japan, China, Australia, and the United Arab Emirates. Other regions can be added as `AddressRule` values. The initial built-in set is not a global postal directory.
 
 ## Use
 
