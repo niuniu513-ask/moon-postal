@@ -6,6 +6,8 @@ pub fn builtin_rule(String) -> AddressRule?
 
 pub fn format_address(AddressRule, Address) -> String
 
+pub fn format_address_lines(AddressRule, Address) -> Array[String]
+
 pub fn validate(AddressRule, Address) -> Array[AddressIssue]
 
 // Errors

@@ -209,4 +209,7 @@ test "formatter skips empty fields and keeps every address line" {
     @moon-postal.format_address(rule, address),
     "Example Ltd\n2 High Street\nFlat 4\nLondon\nSW1A 1AA\nGB",
   )
+  let lines = @moon-postal.format_address_lines(rule, address)
+  assert_eq(lines.length(), 6)
+  assert_eq(lines[2], "Flat 4")
 }

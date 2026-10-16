@@ -310,6 +310,14 @@ pub fn validate(rule : AddressRule, address : Address) -> Array[AddressIssue] {
 
 ///|
 pub fn format_address(rule : AddressRule, address : Address) -> String {
+  format_address_lines(rule, address).join("\n")
+}
+
+///|
+pub fn format_address_lines(
+  rule : AddressRule,
+  address : Address,
+) -> Array[String] {
   let lines : Array[String] = []
   for field in rule.field_order {
     match field {
@@ -320,7 +328,7 @@ pub fn format_address(rule : AddressRule, address : Address) -> String {
       _ => push_nonempty(lines, field_value(field, address))
     }
   }
-  lines.join("\n")
+  lines
 }
 
 ///|
