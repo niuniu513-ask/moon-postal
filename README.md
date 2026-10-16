@@ -20,7 +20,7 @@ let issues = @moon-postal.validate(rule, address)
 let label = @moon-postal.format_address(rule, address)
 ```
 
-`AddressRule::new` lets callers supply required fields, a postal-code pattern, and field order. `PostalPattern` supports exact or ranged digit counts, ranged ASCII alphanumeric codes, and a no-check option; built-ins provide additional country-specific checks. `validate` reports missing configured fields, a country mismatch, and a postal-code syntax mismatch. `format_address` emits non-empty fields in the rule's order. It does not geocode addresses, verify deliverability, infer a user's location, or guarantee that a postal code exists.
+`AddressRule::new` lets callers supply required fields, a postal-code pattern, and field order. `PostalPattern` supports exact or ranged digit counts, ranged ASCII alphanumeric codes, and a no-check option. Generic patterns reject internal separators; built-ins provide country-specific checks. `validate` reports missing configured fields, a country mismatch, and a postal-code syntax mismatch. `format_address` emits non-empty fields in the rule's order. It does not geocode addresses, verify deliverability, infer a user's location, or guarantee that a postal code exists.
 
 ## Scope
 

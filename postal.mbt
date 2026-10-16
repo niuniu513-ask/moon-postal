@@ -347,19 +347,18 @@ fn push_nonempty(lines : Array[String], value : String) -> Unit {
 
 ///|
 fn postal_matches(pattern : PostalPattern, input : String) -> Bool {
-  let compact = compact_postal(input)
+  let code = input.trim().to_owned()
   match pattern.kind {
     NoCheck => true
-    Digits =>
-      compact.length() == pattern.minimum_length && all_ascii_digits(compact)
+    Digits => code.length() == pattern.minimum_length && all_ascii_digits(code)
     DigitsRange =>
-      compact.length() >= pattern.minimum_length &&
-      compact.length() <= pattern.maximum_length &&
-      all_ascii_digits(compact)
+      code.length() >= pattern.minimum_length &&
+      code.length() <= pattern.maximum_length &&
+      all_ascii_digits(code)
     AlphanumericRange =>
-      compact.length() >= pattern.minimum_length &&
-      compact.length() <= pattern.maximum_length &&
-      all_ascii_alphanumeric(compact)
+      code.length() >= pattern.minimum_length &&
+      code.length() <= pattern.maximum_length &&
+      all_ascii_alphanumeric(code)
     UsZip => us_zip_matches(input)
     CanadaPostal => canada_postal_matches(input)
     UkPostcode => uk_postcode_matches(input)

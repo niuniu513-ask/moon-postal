@@ -155,6 +155,20 @@ test "country code mismatch is diagnostic" {
 }
 
 ///|
+test "custom patterns reject separators that were not configured" {
+  let rule = @moon-postal.AddressRule::new(
+    "XY",
+    [@moon-postal.PostalCode],
+    @moon-postal.PostalPattern::digits(4),
+    [@moon-postal.PostalCode],
+  )
+  let good = @moon-postal.Address::new(postal_code="1234", country_code="XY")
+  let dashed = @moon-postal.Address::new(postal_code="12-34", country_code="XY")
+  assert_eq(@moon-postal.validate(rule, good).length(), 0)
+  assert_eq(@moon-postal.validate(rule, dashed).length(), 1)
+}
+
+///|
 test "built-in rules require a country and accept surrounding whitespace" {
   let rule = @moon-postal.builtin_rule("US").unwrap()
   let missing = @moon-postal.Address::new(
