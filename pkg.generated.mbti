@@ -85,12 +85,12 @@ pub(all) enum IssueCode {
 
 pub struct PostalPattern {
   kind : PostalPatternKind
-  minimum_length : Int
-  maximum_length : Int
+  minimum_length : Int32
+  maximum_length : Int32
 }
-pub fn PostalPattern::alphanumeric_in_range(Int, Int) -> Self
-pub fn PostalPattern::digits(Int) -> Self
-pub fn PostalPattern::digits_in_range(Int, Int) -> Self
+pub fn PostalPattern::alphanumeric_in_range(Int32, Int32) -> Self
+pub fn PostalPattern::digits(Int32) -> Self
+pub fn PostalPattern::digits_in_range(Int32, Int32) -> Self
 pub fn PostalPattern::no_check() -> Self
 
 pub(all) enum PostalPatternKind {
