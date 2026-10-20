@@ -2,6 +2,8 @@
 
 Checked 2026-10-16. This is a finite review, not a claim of global uniqueness or organizer approval.
 
+2026-10-20 implementation note: The relationship API accepts caller-provided area/postal-prefix entries. The decision example uses a small illustrative US table (MA 021/022 and NY 100) to demonstrate match, conflict, and uncovered-area handling. It is not a complete or authoritative postal dataset and is not copied from `libaddressinput`. Applications should supply and maintain their own appropriately licensed regional relationship data.
+
 The Mooncakes module and GitHub repository both use the `niuniu513-ask` namespace. The module manifest points at that GitHub repository.
 
 | Source | Inspected scope | Relationship |
@@ -17,9 +19,9 @@ The Mooncakes module and GitHub repository both use the `niuniu513-ask` namespac
 ## Current project boundary
 
 - Input: structured fields and a caller-selected regional rule.
-- Output: field-specific missing/invalid postal-code diagnostics and ordered address lines.
+- Output: field-specific diagnostics, a relationship status when caller data is configured, and ordered label lines only when configured checks pass.
 - Built-ins: US, CA, GB, JP, CN, AU, AE.
-- Extension: callers can define additional `AddressRule` values, including simple custom postal-code constraints.
+- Extension: callers can define additional `AddressRule` values and attach partial area/postal-prefix relationships. Uncovered areas are reported explicitly when such a table is configured.
 - Not included: geocoding, deliverability confirmation, global administrative-area databases, localized field labels, or network lookups.
 
 ## Licensing

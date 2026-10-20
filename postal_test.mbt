@@ -13,6 +13,17 @@ fn sample_address(
 }
 
 ///|
+fn sample_us_relationship_rule() -> @moon-postal.AddressRule {
+  @moon-postal.builtin_rule("US")
+  .unwrap()
+  .with_area_postal_prefixes([
+    @moon-postal.AreaPostalPrefix::new("MA", "021"),
+    @moon-postal.AreaPostalPrefix::new("MA", "022"),
+    @moon-postal.AreaPostalPrefix::new("NY", "100"),
+  ])
+}
+
+///|
 test "US address validation and formatting" {
   let rule = @moon-postal.builtin_rule("us").unwrap()
   let address = @moon-postal.Address::new(
@@ -28,6 +39,167 @@ test "US address validation and formatting" {
     @moon-postal.format_address(rule, address),
     "Ada Lovelace\n12 Example Street\nBoston, MA 02108-1234\nUS",
   )
+}
+
+///|
+test "regional rules relate administrative area to postal prefix" {
+  let rule = sample_us_relationship_rule()
+  let valid = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="02108",
+    country_code="US",
+  )
+  let invalid = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="10001",
+    country_code="US",
+  )
+  assert_eq(@moon-postal.validate(rule, valid).length(), 0)
+  let issues = @moon-postal.validate(rule, invalid)
+  assert_eq(issues.length(), 1)
+  assert_true(issues[0].code is @moon-postal.AdministrativeAreaPostalMismatch)
+  assert_eq(
+    issues[0].message(),
+    "administrative area and postal code do not match",
+  )
+  assert_true(@moon-postal.format_if_valid(rule, invalid) is None)
+}
+
+///|
+test "relationship checks defer to syntax and missing-field diagnostics" {
+  let rule = sample_us_relationship_rule()
+  let malformed = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="bad",
+    country_code="US",
+  )
+  let issues = @moon-postal.validate(rule, malformed)
+  assert_eq(issues.length(), 1)
+  assert_true(issues[0].code is @moon-postal.InvalidPostalCode)
+  let missing = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Boston",
+    administrative_area="MA",
+    country_code="US",
+  )
+  assert_eq(@moon-postal.validate(rule, missing).length(), 1)
+}
+
+///|
+test "assessment exposes either issues or printable label lines" {
+  let rule = sample_us_relationship_rule()
+  let valid = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Boston",
+    administrative_area="ma",
+    postal_code="02210",
+    country_code="US",
+  )
+  let good = @moon-postal.assess(rule, valid)
+  assert_eq(good.issues().length(), 0)
+  assert_eq(good.label_lines().length(), 3)
+  assert_true(good.relationship_status() is @moon-postal.Matched)
+  let conflict = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="10001",
+    country_code="US",
+  )
+  let rejected = @moon-postal.assess(rule, conflict)
+  assert_eq(rejected.issues().length(), 1)
+  assert_eq(rejected.label_lines().length(), 0)
+  assert_true(rejected.relationship_status() is @moon-postal.Mismatched)
+}
+
+///|
+test "partial relationship tables reject unlisted areas" {
+  let rule = sample_us_relationship_rule()
+  let address = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Chicago",
+    administrative_area="IL",
+    postal_code="60601",
+    country_code="US",
+  )
+  let decision = @moon-postal.assess(rule, address)
+  assert_true(decision.relationship_status() is @moon-postal.UnknownArea)
+  assert_eq(decision.issues().length(), 1)
+  assert_true(
+    decision.issues()[0].code is @moon-postal.UnknownAdministrativeArea,
+  )
+  assert_eq(decision.label_lines().length(), 0)
+}
+
+///|
+test "country mismatch skips regional relationships" {
+  let rule = sample_us_relationship_rule()
+  let address = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    locality="Boston",
+    administrative_area="MA",
+    postal_code="10001",
+    country_code="CA",
+  )
+  let decision = @moon-postal.assess(rule, address)
+  assert_true(decision.relationship_status() is @moon-postal.Skipped)
+  assert_eq(decision.issues().length(), 1)
+  assert_true(decision.issues()[0].code is @moon-postal.CountryMismatch)
+}
+
+///|
+test "required fields must appear in configured label order" {
+  let rule = @moon-postal.AddressRule::new(
+    "XY",
+    [@moon-postal.AddressLine, @moon-postal.PostalCode],
+    @moon-postal.PostalPattern::digits(4),
+    [@moon-postal.AddressLine],
+  )
+  let address = @moon-postal.Address::new(
+    address_lines=["12 Example Street"],
+    postal_code="1234",
+    country_code="XY",
+  )
+  let decision = @moon-postal.assess(rule, address)
+  assert_eq(decision.issues().length(), 1)
+  assert_true(
+    decision.issues()[0].code is @moon-postal.RequiredFieldNotRendered,
+  )
+  assert_eq(decision.label_lines().length(), 0)
+}
+
+///|
+test "relationship rules require country area and postal code" {
+  let rule = @moon-postal.AddressRule::new(
+    "XY",
+    [@moon-postal.AddressLine],
+    @moon-postal.PostalPattern::digits(4),
+    [
+      @moon-postal.AddressLine,
+      @moon-postal.AdministrativeArea,
+      @moon-postal.PostalCode,
+      @moon-postal.Country,
+    ],
+  ).with_area_postal_prefixes([@moon-postal.AreaPostalPrefix::new("AB", "12")])
+  let address = @moon-postal.Address::new(address_lines=["12 Example Street"])
+  let decision = @moon-postal.assess(rule, address)
+  assert_eq(decision.issues().length(), 3)
+  assert_true(decision.relationship_status() is @moon-postal.Skipped)
+  assert_eq(decision.label_lines().length(), 0)
+}
+
+///|
+test "built-in rules expose absence of relationship data" {
+  let rule = @moon-postal.builtin_rule("US").unwrap()
+  let decision = @moon-postal.assess(rule, sample_address("US", "02108"))
+  assert_true(decision.relationship_status() is @moon-postal.NotConfigured)
+  assert_eq(decision.issues().length(), 0)
 }
 
 ///|

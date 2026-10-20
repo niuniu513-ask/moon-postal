@@ -8,13 +8,35 @@ pub(all) enum AddressField {
   AdministrativeArea
   PostalCode
   Country
-}
+} derive(Eq)
+
+///|
+pub extend AddressField with Eq::{equal, not_equal}
 
 ///|
 pub struct PostalPattern {
   kind : PostalPatternKind
   minimum_length : Int
   maximum_length : Int
+}
+
+/// A caller-provided postal prefix for one administrative area.
+
+///|
+pub struct AreaPostalPrefix {
+  area : String
+  prefix : String
+}
+
+///|
+pub fn AreaPostalPrefix::new(
+  area : String,
+  prefix : String,
+) -> AreaPostalPrefix {
+  {
+    area: ascii_uppercase(area.trim().to_owned()),
+    prefix: compact_postal(prefix),
+  }
 }
 
 ///|
@@ -103,6 +125,7 @@ pub struct AddressRule {
   postal_pattern : PostalPattern
   field_order : Array[AddressField]
   combine_region_postal : Bool
+  area_postal_prefixes : Array[AreaPostalPrefix]
 }
 
 ///|
@@ -118,7 +141,30 @@ pub fn AddressRule::new(
     postal_pattern,
     field_order,
     combine_region_postal: false,
+    area_postal_prefixes: [],
   }
+}
+
+/// Configures a partial relationship table. Unlisted areas are rejected.
+
+///|
+pub fn AddressRule::with_area_postal_prefixes(
+  self : AddressRule,
+  relationships : Array[AreaPostalPrefix],
+) -> AddressRule {
+  if relationships.is_empty() {
+    return { ..self, area_postal_prefixes: [], }
+  }
+  let required_fields : Array[AddressField] = []
+  for field in self.required_fields {
+    required_fields.push(field)
+  }
+  for field in [Country, AdministrativeArea, PostalCode] {
+    if !required_fields.contains(field) {
+      required_fields.push(field)
+    }
+  }
+  { ..self, required_fields, area_postal_prefixes: relationships, }
 }
 
 ///|
@@ -126,12 +172,60 @@ pub(all) enum IssueCode {
   MissingRequiredField
   InvalidPostalCode
   CountryMismatch
+  AdministrativeAreaPostalMismatch
+  UnknownAdministrativeArea
+  RequiredFieldNotRendered
+}
+
+///|
+pub(all) enum RelationshipStatus {
+  NotConfigured
+  Skipped
+  UnknownArea
+  Matched
+  Mismatched
 }
 
 ///|
 pub struct AddressIssue {
   code : IssueCode
   field : AddressField
+}
+
+///|
+pub struct AddressDecision {
+  issues : Array[AddressIssue]
+  label_lines : Array[String]
+  relationship_status : RelationshipStatus
+}
+
+///|
+pub fn AddressDecision::issues(self : AddressDecision) -> Array[AddressIssue] {
+  self.issues
+}
+
+///|
+pub fn AddressDecision::label_lines(self : AddressDecision) -> Array[String] {
+  self.label_lines
+}
+
+///|
+pub fn AddressDecision::relationship_status(
+  self : AddressDecision,
+) -> RelationshipStatus {
+  self.relationship_status
+}
+
+///|
+pub fn assess(rule : AddressRule, address : Address) -> AddressDecision {
+  let issues = validate(rule, address)
+  let relationship_status = area_postal_status(rule, address)
+  let label_lines = if issues.is_empty() {
+    format_address_lines(rule, address)
+  } else {
+    []
+  }
+  { issues, label_lines, relationship_status, }
 }
 
 ///|
@@ -150,12 +244,18 @@ pub fn AddressIssue::message(self : AddressIssue) -> String {
     MissingRequiredField => field + " is required"
     InvalidPostalCode => "postal code has an invalid format"
     CountryMismatch => "country code does not match the selected rule"
+    AdministrativeAreaPostalMismatch =>
+      "administrative area and postal code do not match"
+    UnknownAdministrativeArea =>
+      "administrative area is not covered by the selected relationship rule"
+    RequiredFieldNotRendered =>
+      field + " is required but absent from label order"
   }
 }
 
 ///|
 pub fn builtin_rule(country_code : String) -> AddressRule? {
-  match ascii_uppercase(country_code) {
+  match ascii_uppercase(country_code.trim().to_owned()) {
     "US" =>
       Some({
         country_code: "US",
@@ -168,6 +268,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         ],
         postal_pattern: builtin_postal_pattern(UsZip),
         combine_region_postal: true,
+        area_postal_prefixes: [],
         field_order: [
           Recipient,
           Organization,
@@ -190,6 +291,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         ],
         postal_pattern: builtin_postal_pattern(CanadaPostal),
         combine_region_postal: true,
+        area_postal_prefixes: [],
         field_order: [
           Recipient,
           Organization,
@@ -206,6 +308,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         required_fields: [AddressLine, Locality, PostalCode, Country],
         postal_pattern: builtin_postal_pattern(UkPostcode),
         combine_region_postal: false,
+        area_postal_prefixes: [],
         field_order: [
           Recipient,
           Organization,
@@ -223,6 +326,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         required_fields: [AddressLine, Locality, PostalCode, Country],
         postal_pattern: builtin_postal_pattern(JapanPostal),
         combine_region_postal: false,
+        area_postal_prefixes: [],
         field_order: [
           PostalCode,
           AdministrativeArea,
@@ -246,6 +350,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         ],
         postal_pattern: builtin_postal_pattern(ChinaPostal),
         combine_region_postal: false,
+        area_postal_prefixes: [],
         field_order: [
           Country,
           AdministrativeArea,
@@ -269,6 +374,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         ],
         postal_pattern: PostalPattern::digits(4),
         combine_region_postal: true,
+        area_postal_prefixes: [],
         field_order: [
           Recipient,
           Organization,
@@ -285,6 +391,7 @@ pub fn builtin_rule(country_code : String) -> AddressRule? {
         required_fields: [AddressLine, Locality, AdministrativeArea, Country],
         postal_pattern: PostalPattern::no_check(),
         combine_region_postal: false,
+        area_postal_prefixes: [],
         field_order: [
           Recipient,
           Organization,
@@ -306,15 +413,68 @@ pub fn validate(rule : AddressRule, address : Address) -> Array[AddressIssue] {
     issues.push({ code: CountryMismatch, field: Country, })
   }
   for field in rule.required_fields {
+    if !rule.field_order.contains(field) {
+      issues.push({ code: RequiredFieldNotRendered, field, })
+    }
     if field_is_empty(field, address) {
       issues.push({ code: MissingRequiredField, field, })
     }
   }
-  if !address.postal_code.trim().is_empty() &&
-    !postal_matches(rule.postal_pattern, address.postal_code) {
+  let postal_valid = address.postal_code.trim().is_empty() ||
+    postal_matches(rule.postal_pattern, address.postal_code)
+  if !postal_valid {
     issues.push({ code: InvalidPostalCode, field: PostalCode, })
   }
+  if postal_valid {
+    match area_postal_status(rule, address) {
+      Mismatched =>
+        issues.push({
+          code: AdministrativeAreaPostalMismatch,
+          field: AdministrativeArea,
+        })
+      UnknownArea =>
+        issues.push({
+          code: UnknownAdministrativeArea,
+          field: AdministrativeArea,
+        })
+      _ => ()
+    }
+  }
   issues
+}
+
+///|
+fn area_postal_status(
+  rule : AddressRule,
+  address : Address,
+) -> RelationshipStatus {
+  if rule.area_postal_prefixes.is_empty() {
+    return NotConfigured
+  }
+  if address.country_code.trim().is_empty() ||
+    ascii_uppercase(address.country_code.trim().to_owned()) != rule.country_code ||
+    address.administrative_area.trim().is_empty() ||
+    address.postal_code.trim().is_empty() ||
+    !postal_matches(rule.postal_pattern, address.postal_code) {
+    return Skipped
+  }
+  let area = ascii_uppercase(address.administrative_area.trim().to_owned())
+  let postal = compact_postal(address.postal_code)
+  let mut area_seen = false
+  for relationship in rule.area_postal_prefixes {
+    if relationship.area == area {
+      area_seen = true
+      if !relationship.prefix.is_empty() &&
+        postal.has_prefix(relationship.prefix) {
+        return Matched
+      }
+    }
+  }
+  if area_seen {
+    Mismatched
+  } else {
+    UnknownArea
+  }
 }
 
 ///|
@@ -324,8 +484,9 @@ pub fn format_address(rule : AddressRule, address : Address) -> String {
 
 ///|
 pub fn format_if_valid(rule : AddressRule, address : Address) -> String? {
-  if validate(rule, address).is_empty() {
-    Some(format_address(rule, address))
+  let decision = assess(rule, address)
+  if decision.issues.is_empty() {
+    Some(decision.label_lines.join("\n"))
   } else {
     None
   }

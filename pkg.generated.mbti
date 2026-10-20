@@ -2,6 +2,8 @@
 package "niuniu513-ask/moon-postal"
 
 // Values
+pub fn assess(AddressRule, Address) -> AddressDecision
+
 pub fn builtin_rule(String) -> AddressRule?
 
 pub fn format_address(AddressRule, Address) -> String
@@ -27,6 +29,15 @@ pub struct Address {
 }
 pub fn Address::new(recipient? : String, organization? : String, address_lines? : Array[String], dependent_locality? : String, locality? : String, administrative_area? : String, postal_code? : String, country_code? : String) -> Self
 
+pub struct AddressDecision {
+  issues : Array[AddressIssue]
+  label_lines : Array[String]
+  relationship_status : RelationshipStatus
+}
+pub fn AddressDecision::issues(Self) -> Array[AddressIssue]
+pub fn AddressDecision::label_lines(Self) -> Array[String]
+pub fn AddressDecision::relationship_status(Self) -> RelationshipStatus
+
 pub(all) enum AddressField {
   Recipient
   Organization
@@ -36,7 +47,9 @@ pub(all) enum AddressField {
   AdministrativeArea
   PostalCode
   Country
-}
+} derive(Eq)
+pub fn AddressField::equal(Self, Self) -> Bool
+pub fn AddressField::not_equal(Self, Self) -> Bool
 
 pub struct AddressIssue {
   code : IssueCode
@@ -50,13 +63,24 @@ pub struct AddressRule {
   postal_pattern : PostalPattern
   field_order : Array[AddressField]
   combine_region_postal : Bool
+  area_postal_prefixes : Array[AreaPostalPrefix]
 }
 pub fn AddressRule::new(String, Array[AddressField], PostalPattern, Array[AddressField]) -> Self
+pub fn AddressRule::with_area_postal_prefixes(Self, Array[AreaPostalPrefix]) -> Self
+
+pub struct AreaPostalPrefix {
+  area : String
+  prefix : String
+}
+pub fn AreaPostalPrefix::new(String, String) -> Self
 
 pub(all) enum IssueCode {
   MissingRequiredField
   InvalidPostalCode
   CountryMismatch
+  AdministrativeAreaPostalMismatch
+  UnknownAdministrativeArea
+  RequiredFieldNotRendered
 }
 
 pub struct PostalPattern {
@@ -79,6 +103,14 @@ pub(all) enum PostalPatternKind {
   UkPostcode
   JapanPostal
   ChinaPostal
+}
+
+pub(all) enum RelationshipStatus {
+  NotConfigured
+  Skipped
+  UnknownArea
+  Matched
+  Mismatched
 }
 
 // Type aliases
