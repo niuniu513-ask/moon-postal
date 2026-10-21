@@ -15,6 +15,7 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - name: Check, build, and test
         run: |
+          moon update
           moon fmt --check
           moon check --deny-warn --target all
           moon build --target all

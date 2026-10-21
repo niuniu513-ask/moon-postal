@@ -48,6 +48,7 @@ The `JP` rule renders the town field. Custom directory label rules must include 
 From this repository checkout, with Python 3.10+ and a current MoonBit toolchain:
 
 ```sh
+moon update
 python scripts/import_japan_post.py
 moon run examples/national --target native
 ```
@@ -120,6 +121,7 @@ The generic directory model accepts reviewed, attributed regional data through t
 Install as `niuniu513-ask/moon-postal`.
 
 ```sh
+moon update
 moon check --target all
 moon test --target all
 moon run examples/quickstart --target native

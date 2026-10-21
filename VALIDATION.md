@@ -8,6 +8,7 @@ passed. MoonBit: 31 tests on each of wasm, wasm-gc, js, and native. Python: 4
 adapter tests. GitHub CI must be checked separately against the pushed commit.
 
 ```sh
+moon update
 moon fmt --check
 moon info
 moon check --deny-warn --target all
