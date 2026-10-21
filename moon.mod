@@ -1,6 +1,6 @@
 name = "niuniu513-ask/moon-postal"
 
-version = "0.2.0"
+version = "0.3.0"
 
 readme = "README.md"
 
@@ -10,4 +10,8 @@ license = "MIT"
 
 keywords = [ "postal", "address", "validation", "formatting" ]
 
-description = "Offline postal address rules, field validation, and formatting for MoonBit"
+description = "Offline postal directory lookup, hierarchy resolution, validation, and label decisions"
+
+import {
+  "moonbitlang/x@0.5.5",
+}

@@ -74,6 +74,23 @@ pub struct AreaPostalPrefix {
 }
 pub fn AreaPostalPrefix::new(String, String) -> Self
 
+pub struct DirectoryDecision {
+  // private fields
+}
+pub fn DirectoryDecision::candidates(Self) -> Array[PostalEntry]
+pub fn DirectoryDecision::canonical(Self) -> Address?
+pub fn DirectoryDecision::conflict_field(Self) -> AddressField?
+pub fn DirectoryDecision::issues(Self) -> Array[AddressIssue]
+pub fn DirectoryDecision::label_lines(Self) -> Array[String]
+pub fn DirectoryDecision::status(Self) -> ResolutionStatus
+
+pub(all) enum DirectoryError {
+  EmptyDirectory
+  InvalidRecord(Int32)
+  InvalidTsvRow(Int32)
+  InvalidHeader
+}
+
 pub(all) enum IssueCode {
   MissingRequiredField
   InvalidPostalCode
@@ -82,6 +99,27 @@ pub(all) enum IssueCode {
   UnknownAdministrativeArea
   RequiredFieldNotRendered
 }
+
+pub struct PostalDirectory {
+  // private fields
+}
+pub fn PostalDirectory::from_tsv(String, source~ : String) -> Result[Self, DirectoryError]
+pub fn PostalDirectory::lookup_locality(Self, String, String, area? : String, town? : String) -> Array[PostalEntry]
+pub fn PostalDirectory::lookup_postal(Self, String, String) -> Array[PostalEntry]
+pub fn PostalDirectory::new(Array[PostalEntry], source~ : String) -> Result[Self, DirectoryError]
+pub fn PostalDirectory::resolve(Self, AddressRule, Address) -> DirectoryDecision
+pub fn PostalDirectory::size(Self) -> Int32
+pub fn PostalDirectory::source(Self) -> String
+
+pub struct PostalEntry {
+  country : String
+  postal : String
+  area : String
+  city : String
+  town : String
+  coverage : TownCoverage
+}
+pub fn PostalEntry::new(String, String, String, String, String, coverage? : TownCoverage) -> Self
 
 pub struct PostalPattern {
   kind : PostalPatternKind
@@ -112,6 +150,27 @@ pub(all) enum RelationshipStatus {
   Matched
   Mismatched
 }
+
+pub(all) enum ResolutionStatus {
+  Resolved
+  Ambiguous
+  Conflict
+  UnknownPostal
+  UnknownLocality
+  InvalidInput
+  InsufficientInput
+  UnverifiedTown
+} derive(Eq)
+pub fn ResolutionStatus::equal(Self, Self) -> Bool
+pub fn ResolutionStatus::not_equal(Self, Self) -> Bool
+
+pub(all) enum TownCoverage {
+  ExactTown
+  UnspecifiedTown
+  ConditionalTown
+} derive(Eq)
+pub fn TownCoverage::equal(Self, Self) -> Bool
+pub fn TownCoverage::not_equal(Self, Self) -> Bool
 
 // Type aliases
 

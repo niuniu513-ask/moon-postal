@@ -16,8 +16,8 @@ pub extend AddressField with Eq::{equal, not_equal}
 ///|
 pub struct PostalPattern {
   kind : PostalPatternKind
-  minimum_length : Int
-  maximum_length : Int
+  minimum_length : Int32
+  maximum_length : Int32
 }
 
 /// A caller-provided postal prefix for one administrative area.
@@ -58,22 +58,22 @@ pub fn PostalPattern::no_check() -> PostalPattern {
 }
 
 ///|
-pub fn PostalPattern::digits(length : Int) -> PostalPattern {
+pub fn PostalPattern::digits(length : Int32) -> PostalPattern {
   { kind: Digits, minimum_length: length, maximum_length: length, }
 }
 
 ///|
 pub fn PostalPattern::digits_in_range(
-  minimum : Int,
-  maximum : Int,
+  minimum : Int32,
+  maximum : Int32,
 ) -> PostalPattern {
   { kind: DigitsRange, minimum_length: minimum, maximum_length: maximum, }
 }
 
 ///|
 pub fn PostalPattern::alphanumeric_in_range(
-  minimum : Int,
-  maximum : Int,
+  minimum : Int32,
+  maximum : Int32,
 ) -> PostalPattern {
   { kind: AlphanumericRange, minimum_length: minimum, maximum_length: maximum, }
 }
@@ -97,14 +97,14 @@ pub struct Address {
 
 ///|
 pub fn Address::new(
-  recipient? : String = "",
-  organization? : String = "",
-  address_lines? : Array[String] = [],
-  dependent_locality? : String = "",
-  locality? : String = "",
-  administrative_area? : String = "",
-  postal_code? : String = "",
-  country_code? : String = "",
+  recipient~ : String = "",
+  organization~ : String = "",
+  address_lines~ : Array[String] = [],
+  dependent_locality~ : String = "",
+  locality~ : String = "",
+  administrative_area~ : String = "",
+  postal_code~ : String = "",
+  country_code~ : String = "",
 ) -> Address {
   {
     recipient,
