@@ -43,10 +43,11 @@ fn main raise {
   assert_true(reverse.length() == 1)
   assert_true(reverse[0].postal == "1000001")
   println("Reverse lookup: " + reverse[0].postal)
-  // Sample the entire ordered national file, not only the Tokyo example.
+  // Pass --all after the path to exercise every national relation.
+  let exhaustive = args.length() > 2 && args[2] == "--all"
   let mut probes = 0
   for i, line in text.split("\n").to_array() {
-    if i == 0 || i % 251 != 1 || line.is_empty() {
+    if i == 0 || (!exhaustive && i % 251 != 1) || line.is_empty() {
       continue
     }
     let fields = line.split("\t").map(s => s.to_owned()).to_array()

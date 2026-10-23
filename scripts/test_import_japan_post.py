@@ -3,8 +3,11 @@ import csv
 import io
 import unittest
 import zipfile
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
-from import_japan_post import convert
+from import_japan_post import convert, install_snapshot, verify_snapshot
 
 
 def archive(rows):
@@ -21,6 +24,56 @@ def row(postal='0010001', town='試験町', split='0'):
 
 
 class ImportTests(unittest.TestCase):
+    def test_empty_archive_rejected(self):
+        with self.assertRaises(ValueError):
+            convert(archive([]))
+
+    def test_snapshot_install_verify_and_tamper_detection(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'jp.tsv'
+            install_snapshot(archive([row()]), output)
+            self.assertEqual(verify_snapshot(output)['unique_rows'], 1)
+            output.write_text('tampered', encoding='utf-8')
+            with self.assertRaises(ValueError):
+                verify_snapshot(output)
+
+    def test_invalid_replacement_keeps_active_snapshot(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'jp.tsv'
+            install_snapshot(archive([row()]), output)
+            before = {p.name: p.read_bytes() for p in Path(folder).iterdir()}
+            with self.assertRaises(ValueError):
+                install_snapshot(archive([row(postal='bad')]), output)
+            self.assertEqual(before, {p.name: p.read_bytes() for p in Path(folder).iterdir()})
+
+    def test_failed_first_replace_keeps_files_and_cleans_staging(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'jp.tsv'
+            install_snapshot(archive([row()]), output)
+            before = {p.name: p.read_bytes() for p in Path(folder).iterdir()}
+            with patch('import_japan_post.os.replace', side_effect=OSError('disk failure')):
+                with self.assertRaises(OSError):
+                    install_snapshot(archive([row(town='new town')]), output)
+            self.assertEqual(before, {p.name: p.read_bytes() for p in Path(folder).iterdir()})
+
+    def test_interrupted_multi_file_publish_is_detected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'jp.tsv'
+            install_snapshot(archive([row()]), output)
+            old_tsv = output.read_bytes()
+            import os
+            replace = os.replace
+            def fail_on_tsv(source, target):
+                if Path(target) == output:
+                    raise OSError('interrupted before TSV publish')
+                replace(source, target)
+            with patch('import_japan_post.os.replace', side_effect=fail_on_tsv):
+                with self.assertRaises(OSError):
+                    install_snapshot(archive([row(town='new town')]), output)
+            self.assertEqual(output.read_bytes(), old_tsv)
+            with self.assertRaises(ValueError):
+                verify_snapshot(output)
+
     def test_bom_leading_zero_quoted_comma_and_dedup(self):
         rows, metadata = convert(archive([row(town='町,域'), row(town='町,域')]))
         self.assertEqual(rows, [('JP', '0010001', 'A県', 'B市', '町,域', 'exact')])

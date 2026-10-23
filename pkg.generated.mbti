@@ -57,6 +57,12 @@ pub struct AddressIssue {
 }
 pub fn AddressIssue::message(Self) -> String
 
+pub struct AddressJob {
+  id : String
+  address : Address
+}
+pub fn AddressJob::new(String, Address) -> Self
+
 pub struct AddressRule {
   country_code : String
   required_fields : Array[AddressField]
@@ -74,6 +80,45 @@ pub struct AreaPostalPrefix {
 }
 pub fn AreaPostalPrefix::new(String, String) -> Self
 
+pub(all) enum BatchError {
+  InvalidLimit
+  TooManyJobs
+  InvalidJobId(Int32)
+  DuplicateJobId(Int32)
+}
+
+pub(all) enum BatchPolicy {
+  KeepValid
+  RequireAllResolved
+}
+
+pub struct BatchReport {
+  revision : String
+  source : String
+  rows : Array[BatchRow]
+  resolved : Int32
+  conflicted : Int32
+  ambiguous : Int32
+  unknown : Int32
+  unverified : Int32
+  invalid : Int32
+  insufficient : Int32
+  export_allowed : Bool
+  // private fields
+}
+pub fn BatchReport::labels_for(Self, String) -> Array[String]
+
+pub struct BatchRow {
+  id : String
+  audit : ResolutionAudit
+}
+
+pub struct DirectoryChanges {
+  // private fields
+}
+pub fn DirectoryChanges::added(Self) -> Array[PostalEntry]
+pub fn DirectoryChanges::removed(Self) -> Array[PostalEntry]
+
 pub struct DirectoryDecision {
   // private fields
 }
@@ -90,6 +135,17 @@ pub(all) enum DirectoryError {
   InvalidTsvRow(Int32)
   InvalidHeader
 }
+
+pub struct DirectorySnapshot {
+  // private fields
+}
+pub fn DirectorySnapshot::apply(Self, expected_revision~ : String, revision~ : String, additions~ : Array[PostalEntry], removals~ : Array[PostalEntry], source~ : String, max_changes? : Int32) -> Result[Self, SnapshotError]
+pub fn DirectorySnapshot::compare(Self, Self) -> DirectoryChanges
+pub fn DirectorySnapshot::directory(Self) -> PostalDirectory
+pub fn DirectorySnapshot::new(PostalDirectory, revision~ : String) -> Result[Self, SnapshotError]
+pub fn DirectorySnapshot::resolve(Self, AddressRule, Address) -> ResolutionAudit
+pub fn DirectorySnapshot::resolve_batch(Self, AddressRule, Array[AddressJob], policy? : BatchPolicy, max_jobs? : Int32) -> Result[BatchReport, BatchError]
+pub fn DirectorySnapshot::revision(Self) -> String
 
 pub(all) enum IssueCode {
   MissingRequiredField
@@ -110,6 +166,7 @@ pub fn PostalDirectory::new(Array[PostalEntry], source~ : String) -> Result[Self
 pub fn PostalDirectory::resolve(Self, AddressRule, Address) -> DirectoryDecision
 pub fn PostalDirectory::size(Self) -> Int32
 pub fn PostalDirectory::source(Self) -> String
+pub fn PostalDirectory::to_tsv(Self) -> String
 
 pub struct PostalEntry {
   country : String
@@ -151,6 +208,14 @@ pub(all) enum RelationshipStatus {
   Mismatched
 }
 
+pub struct ResolutionAudit {
+  revision : String
+  source : String
+  decision : DirectoryDecision
+  steps : Array[ResolutionStep]
+  completed_fields : Array[AddressField]
+}
+
 pub(all) enum ResolutionStatus {
   Resolved
   Ambiguous
@@ -163,6 +228,24 @@ pub(all) enum ResolutionStatus {
 } derive(Eq)
 pub fn ResolutionStatus::equal(Self, Self) -> Bool
 pub fn ResolutionStatus::not_equal(Self, Self) -> Bool
+
+pub struct ResolutionStep {
+  field : AddressField
+  before : Int32
+  after : Int32
+}
+
+pub(all) enum SnapshotError {
+  InvalidRevision
+  StaleRevision
+  SameRevision
+  InvalidDirectory(DirectoryError)
+  DuplicateAddition(Int32)
+  DuplicateRemoval(Int32)
+  MissingRemoval(Int32)
+  ExistingAddition(Int32)
+  TooManyChanges
+}
 
 pub(all) enum TownCoverage {
   ExactTown

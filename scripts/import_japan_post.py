@@ -14,6 +14,8 @@ from pathlib import Path
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
+import os
+import tempfile
 
 URL = "https://www.post.japanpost.jp/service/search/zipcode/download/utf/zip/utf_ken_all.zip"
 HEADER = "country\tpostal\tarea\tcity\ttown\tcoverage\n"
@@ -43,6 +45,8 @@ def convert(raw: bytes) -> tuple[list[tuple[str, ...]], dict]:
             raise ValueError(f"empty/control-character field at row {number}")
         rows.append(row)
     unique = list(dict.fromkeys(rows))
+    if not unique:
+        raise ValueError("empty Japan Post snapshot")
     return unique, {
         "source_url": URL,
         "format_description": "https://www.post.japanpost.jp/zipcode/dl/utf-zip.html",
@@ -56,19 +60,55 @@ def convert(raw: bytes) -> tuple[list[tuple[str, ...]], dict]:
     }
 
 
+def install_snapshot(raw: bytes, output: Path) -> dict:
+    """Validate first, then replace each file atomically. Publish TSV last.
+
+    The three files are not a multi-file transaction. Readers must verify the
+    TSV hash in the manifest; a mismatched pair must never be used together.
+    """
+    rows, metadata = convert(raw)
+    content = (HEADER + ''.join('\t'.join(row) + '\n' for row in rows)).encode('utf-8')
+    metadata['tsv_sha256'] = hashlib.sha256(content).hexdigest()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    staged = []
+    try:
+        for target, payload in [
+            (output.with_suffix('.zip'), raw),
+            (output.with_suffix('.json'), (json.dumps(metadata, ensure_ascii=False, indent=2) + '\n').encode('utf-8')),
+            (output, content),
+        ]:
+            with tempfile.NamedTemporaryFile(dir=output.parent, prefix='.postal-', delete=False) as f:
+                staged.append((Path(f.name), target))
+                f.write(payload)
+                f.flush()
+                os.fsync(f.fileno())
+        for temp, target in staged:
+            os.replace(temp, target)
+    finally:
+        for temp, _ in staged:
+            temp.unlink(missing_ok=True)
+    return metadata
+
+
+def verify_snapshot(output: Path) -> dict:
+    metadata = json.loads(output.with_suffix('.json').read_text(encoding='utf-8'))
+    for path, field in [(output, 'tsv_sha256'), (output.with_suffix('.zip'), 'archive_sha256')]:
+        if hashlib.sha256(path.read_bytes()).hexdigest() != metadata[field]:
+            raise ValueError(f"snapshot integrity mismatch: {path.name}")
+    return metadata
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--archive', type=Path, help='use an already downloaded official ZIP offline')
     parser.add_argument('--output', type=Path, default=Path('_build/data/jp.tsv'))
+    parser.add_argument('--verify', action='store_true', help='verify stored ZIP and TSV against the manifest without network')
     args = parser.parse_args()
-    raw = args.archive.read_bytes() if args.archive else urllib.request.urlopen(URL, timeout=60).read()
-    rows, metadata = convert(raw)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    content = HEADER + ''.join('\t'.join(row) + '\n' for row in rows)
-    args.output.write_text(content, encoding='utf-8', newline='')
-    args.output.with_suffix('.zip').write_bytes(raw)
-    metadata['tsv_sha256'] = hashlib.sha256(content.encode()).hexdigest()
-    args.output.with_suffix('.json').write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    if args.verify:
+        metadata = verify_snapshot(args.output)
+    else:
+        raw = args.archive.read_bytes() if args.archive else urllib.request.urlopen(URL, timeout=60).read()
+        metadata = install_snapshot(raw, args.output)
     print(json.dumps(metadata, ensure_ascii=False, indent=2))
 
 

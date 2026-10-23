@@ -6,7 +6,7 @@ It retains syntax/layout rules for US, CA, GB, JP, CN, AU, and AE. The directory
 
 ## Directory resolution
 
-The 0.3.0 source introduces `PostalDirectory`. Build it from typed `PostalEntry` records or strict TSV. Indexes use country + postal code and country + city; repeated records are deduplicated while one-to-many and many-to-many relationships remain intact. A supplied region, city, or town narrows the candidate set. Conflicting fields are reported; they are never overwritten. Only a unique exact town can fill omitted fields and proceed through the existing validation/label gates.
+The 0.3.0 directory engine introduces `PostalDirectory`. Build it from typed `PostalEntry` records or strict TSV. Indexes use country + postal code and country + city; repeated records are deduplicated while one-to-many and many-to-many relationships remain intact. A supplied region, city, or town narrows the candidate set. Conflicting fields are reported; they are never overwritten. Only a unique exact town can fill omitted fields and proceed through the existing validation/label gates.
 
 ```moonbit
 let directory = @moon-postal.PostalDirectory::new([
@@ -43,6 +43,20 @@ The `JP` rule renders the town field. Custom directory label rules must include 
 2. **Address entry:** submit a city with optional region/town to `lookup_locality`. Show all postal alternatives; when several codes serve the same town, require a choice rather than selecting the first code.
 3. **Batch data cleanup:** load one versioned TSV snapshot, reuse its indexes across records, and separate accepted addresses, hierarchy conflicts, unknown codes, ambiguous records, and conditional/fallback towns. Only accepted records receive canonical addresses and label lines.
 
+### Versioned batches and traceable updates (0.4.0 source)
+
+`DirectorySnapshot` binds an immutable directory to a caller-supplied revision. Its `resolve` returns the decision, revision/source, candidate counts before and after each supplied hierarchy filter, and the fields completed. Counts explain how a result was reached; they do not prove delivery or source authenticity.
+
+`resolve_batch` validates job IDs and capacity before processing, preserves input order, and reports every decision status. `KeepValid` exports accepted labels; `RequireAllResolved` withholds `labels_for(id)` for the entire batch when any row fails. Raw decisions remain available for diagnosis, so this is an export policy, not a security boundary.
+
+`compare` computes stable additions/removals, including changes in town coverage. `apply` checks the expected base revision, rejects duplicate/missing operations, and rebuilds both indexes only after validation. It returns a new snapshot; failed updates leave the previous snapshot usable. Revisions are metadata rather than signatures; updates rebuild in memory rather than modifying a persistent database.
+
+```sh
+moon run examples/workflow --target native
+```
+
+This executable demonstrates a conflicting batch withholding export, candidate narrowing, directory additions/removals, stale-update rejection, and different lookup results before/after a postal-code change. See [ENGINEERING.md](ENGINEERING.md) for scope, algorithm costs, invariants, and limits.
+
 ### National Japan Post example
 
 From this repository checkout, with Python 3.10+ and a current MoonBit toolchain:
@@ -53,14 +67,15 @@ python scripts/import_japan_post.py
 moon run examples/national --target native
 ```
 
-The adapter downloads the [Japan Post UTF-8 town dataset](https://www.post.japanpost.jp/service/search/zipcode/download/utf/zip/utf_ken_all.zip), preserves seven-digit codes as text, interprets uncertainty flags, and writes `_build/data/jp.tsv`, the raw ZIP, and a JSON provenance/hash report. Subsequent use is offline. Rebuild from a saved ZIP with:
+The adapter downloads the [Japan Post UTF-8 town dataset](https://www.post.japanpost.jp/service/search/zipcode/download/utf/zip/utf_ken_all.zip), preserves seven-digit codes as text, interprets uncertainty flags, and writes `_build/data/jp.tsv`, the raw ZIP, and a JSON provenance/hash report. Subsequent use is offline. Installation stages and individually replaces the ZIP/manifest/TSV, with TSV last. This is not a multi-file transaction: verify the saved bundle before use, and reject mismatched hashes after interrupted updates. Hashes detect inconsistency; they do not authenticate the publisher. Rebuild from a saved ZIP with:
 
 ```sh
 python scripts/import_japan_post.py --archive _build/data/jp.zip
-moon run examples/national --target native -- _build/data/jp.tsv
+python scripts/import_japan_post.py --verify
+moon run examples/national --target native -- _build/data/jp.tsv --all
 ```
 
-The 2026-10-21 run loaded **124,525** unique rows and **120,720** postal codes across **47** prefectures, then passed 497 sampled forward/reverse lookup checks. Data counts change with upstream updates. The complete snapshot stays outside Git and the distributed library; applications acquire and version it separately. Python handles acquisition/conversion only; indexing, lookup, relationship decisions, canonicalization, and label gates are MoonBit code. `moonbitlang/x/fs` is used only by the native file-loading example; the library itself does not perform I/O.
+The 2026-10-21 run loaded **124,525** unique rows and **120,720** postal codes across **47** prefectures, and its saved snapshot passed all 124,525 forward/reverse relation checks on 2026-10-23 (`--all`). Data counts change with upstream updates. The complete snapshot stays outside Git and the distributed library; applications acquire and version it separately. Python handles acquisition/conversion only; indexing, lookup, relationship decisions, canonicalization, and label gates are MoonBit code. `moonbitlang/x/fs` is used only by the native file-loading example; the library itself does not perform I/O.
 
 The national table covers town routing, excludes dedicated large-business postal codes, and cannot establish building existence or deliverability. Unknown means “not in this snapshot”, not “does not exist”. See [SOURCES.md](SOURCES.md) for provenance and [VALIDATION.md](VALIDATION.md) for reproducible checks.
 
@@ -127,6 +142,7 @@ moon test --target all
 moon run examples/quickstart --target native
 moon run examples/decision --target native
 moon run examples/directory --target native
+moon run examples/workflow --target native
 python -m unittest discover -s scripts
 ```
 
@@ -136,6 +152,7 @@ python -m unittest discover -s scripts
 - `bobzhang/contacts` is an address-book application. It stores and searches contacts rather than providing a reusable regional postal-rule engine.
 - `zxwrrg/moonbit-tradedocs` normalizes party address fields as part of trade-document processing. MoonPostal focuses on configurable postal validation and address-line ordering.
 - Google's `libaddressinput` is the mature reference for the address-rule domain. MoonPostal is an independent MoonBit implementation; it does not claim upstream compatibility or endorsement.
+- [`vicoplus/moon_cpca`](https://github.com/vicoplus/moon_cpca) extracts Chinese administrative divisions from free text. [`JIA2JIA2/moonbitGEODB`](https://github.com/JIA2JIA2/moonbitGEODB) describes address parsing/matching, GIS indexes, and storage. These overlap in general address/indexing concepts; MoonPostal's declared scope is structured postal-routing relations, uncertainty-aware resolution, batch export, and directory-version changes. Neither is a dependency; the comparison is based on their public READMEs, not an exhaustive implementation audit.
 - Japan Post supplies the national town-routing data. The adapter converts that data for MoonPostal; no upstream search software is embedded.
 
 These boundaries describe the inspected project summaries and APIs, not a guarantee that no overlapping implementation exists. See `SOURCES.md` for checked sources and licensing notes.

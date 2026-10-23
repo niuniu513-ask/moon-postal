@@ -91,7 +91,7 @@ pub fn PostalDirectory::new(
       return Err(InvalidRecord(row + 1))
     }
     if builtin_rule(entry.country) is Some(rule) &&
-      !postal_matches(rule.postal_pattern, input.postal) {
+      !postal_matches(rule.postal_pattern, directory_postal_display(entry)) {
       return Err(InvalidRecord(row + 1))
     }
     let kind = match entry.coverage {
@@ -367,7 +367,7 @@ pub fn PostalDirectory::resolve(
   let canonical = {
     ..address,
     country_code: entry.country,
-    postal_code: entry.postal,
+    postal_code: directory_postal_display(entry),
     administrative_area: entry.area,
     locality: entry.city,
     dependent_locality: entry.town,
@@ -449,4 +449,15 @@ pub fn PostalDirectory::from_tsv(
     )
   }
   PostalDirectory::new(entries, source~)
+}
+
+/// Preserve separators required by a country's syntax after key normalization.
+
+///|
+fn directory_postal_display(entry : PostalEntry) -> String {
+  if entry.country == "US" && entry.postal.length() == 9 {
+    entry.postal[0:5].to_owned() + "-" + entry.postal[5:].to_owned()
+  } else {
+    entry.postal
+  }
 }

@@ -37,3 +37,16 @@ The Mooncakes module and GitHub repository both use the `niuniu513-ask` namespac
 ## Licensing
 
 The code is an independent implementation and does not copy Google source code or regional data. Google's project identifies its C++ library as Apache-2.0 and its address metadata as CC-BY-4.0; review exact files and attribution requirements before importing either. Code license: MIT. Japan Post data provenance and the separate acquisition/distribution boundary are described above. The native example uses the separately licensed `moonbitlang/x` filesystem package; it is not vendored into the core.
+
+## 2026-10-23 follow-up and adjacent projects
+
+The saved 2026-10-21 Japan Post ZIP/TSV was reverified against the hashes above; no claim is made that it is the latest upstream release. Exhaustive forward/reverse inclusion probes passed for all 124,525 unique rows. Adapter installation now stages all files, replaces TSV last, and supports offline `--verify`; interruption can still leave a mixed bundle, which must be rejected on hash mismatch.
+
+Repository searches `postal language:MoonBit` and `address validation MoonBit` were repeated: the former returned this project, the latter no repositories. A separate local Mooncakes registry metadata search found adjacent projects omitted from the older comparison:
+
+| Project | Inspected public evidence | Overlap and declared distinction |
+| --- | --- | --- |
+| `vicoproplus/moon_cpca@0.1.0` | [repository README](https://github.com/vicoplus/moon_cpca), Chinese administrative extraction, adcode, 3,511 divisions, MIT/cpca port description | Extracts province/city/district from free text. Shares administrative-address concepts; MoonPostal consumes structured postal relations and reports postal uncertainty/version/batch decisions. Registry namespace and repository owner have different spellings. |
+| `JIA2JIA2/moonbitgeodb@0.1.3` | [repository README](https://github.com/JIA2JIA2/moonbitGEODB), parsing, semantic matching, GIS indexes and persistence, Apache-2.0 description | Shares general address/index/integrity concepts and has broader geospatial aims. MoonPostal does not implement its free-text/geospatial/ML pipeline; its declared contract is postal routing and snapshot lifecycle. |
+
+This is a finite README/metadata comparison, not a full implementation audit or proof of uniqueness. Neither project is a dependency, source-code donor, or integrated component. New snapshot/batch code is independently implemented in MoonBit; Python continues to handle data acquisition only. See `ENGINEERING.md` for exact responsibility and cost boundaries.

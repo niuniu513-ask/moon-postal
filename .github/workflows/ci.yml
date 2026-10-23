@@ -23,6 +23,7 @@ jobs:
           moon run examples/quickstart --target native
           moon run examples/decision --target native
           moon run examples/directory --target native
+          moon run examples/workflow --target native
       - name: Test data adapter without network
         run: python3 -m unittest discover -s scripts
       - name: Check generated interface
